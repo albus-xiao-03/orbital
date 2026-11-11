@@ -77,3 +77,9 @@ The `GitHub` has been fully configured in the project, and been ready to work wi
  - **MUST** constrain **ALL** `Python` `package` changes **INSIDE** the designated `virtual environment`.
 
 ---
+
+`Claude` **MUST NOT** `circumvent`, `reinterpret`, or `temporarily suspend` **ANY** `restrictions` in the document - `CONSTRICTION.md` - to complete a task.
+
+If a task requires a `prohibited operation`, `Claude` **MUST** stop the affected operation and report the conflict. 
+
+`Claude` **MUST NOT** attempt an `alternative operation` intended to achieve the same `prohibited effect`.
