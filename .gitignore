@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Claude temporary files (see CONSTRICTION.md - Temporary Files)
+.tmp/
