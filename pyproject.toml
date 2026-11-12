@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orbital"
+version = "0.1.0"
+description = "Network bridge that lets a ChatGPT agent delegate tasks to Claude Code in a separate Docker Sandbox."
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []
+
+[project.scripts]
+orbital-bridge = "orbital.bridges.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+extend-exclude = [".env", ".tmp"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "S", "N", "C4", "PIE", "RET", "PTH"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
