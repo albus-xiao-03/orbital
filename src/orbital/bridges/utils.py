@@ -28,9 +28,13 @@ def task_id_from_path(path: str) -> str | None:
 
 
 def encode_json(document: Mapping[str, Any]) -> bytes:
-    """Encode *document* as compact UTF-8 JSON; NaN and infinities are refused."""
+    """Encode *document* as compact UTF-8 JSON; NaN and infinities are refused.
+
+    A lone surrogate (which UTF-8 cannot represent, but which a JSON ``\\ud800`` escape can
+    produce) is written back as the same ``\\uXXXX`` escape, so the result is still valid JSON.
+    """
     text = json.dumps(document, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-    return text.encode("utf-8")
+    return text.encode("utf-8", errors="backslashreplace")
 
 
 def decode_json_object(raw: bytes) -> dict[str, Any]:
