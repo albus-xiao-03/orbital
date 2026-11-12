@@ -34,6 +34,12 @@ class TaskRequest:
             raise ValueError("task_id must be a canonical, lowercase UUID version 4")
         if not isinstance(self.prompt, str) or not self.prompt.strip():
             raise ValueError("prompt must be a non-blank string")
+        try:
+            self.prompt.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ValueError(
+                "prompt must be valid Unicode text (it has a lone surrogate)"
+            ) from None
         timeout = self.execution_timeout_seconds
         if isinstance(timeout, bool) or not isinstance(timeout, int) or timeout < 1:
             raise ValueError("execution_timeout_seconds must be an integer of at least 1")
