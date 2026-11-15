@@ -16,7 +16,11 @@ from orbital.bridges.server.server_config import ServerConfig
 
 
 class ServeCommand:
-    """Run the bridge server until ``SIGINT`` or ``SIGTERM`` (a graceful stop)."""
+    """Run the bridge server until ``SIGINT``, ``SIGTERM`` or ``SIGHUP`` (a graceful stop).
+
+    ``SIGHUP`` (the terminal closed) stays ignored if it was ignored when the server started, as
+    under ``nohup``.
+    """
 
     def configure(self, commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
         parser = commands.add_parser(
@@ -25,8 +29,9 @@ class ServeCommand:
             description=(
                 "Run the bridge server that hands each authenticated task to Claude Code. "
                 "Settings come from ORBITAL_BRIDGE_* variables (the key only from "
-                "ORBITAL_BRIDGE_KEY); options override them. Stop it with Ctrl-C or SIGTERM: "
-                "the running task, if any, is terminated and reaped."
+                "ORBITAL_BRIDGE_KEY); options override them. Stop it with Ctrl-C, SIGTERM or by "
+                "closing its terminal (SIGHUP): the running task, if any, is terminated and "
+                "reaped. Under nohup, SIGHUP stays ignored."
             ),
         )
         parser.add_argument("--host", help="bind address (default 0.0.0.0)")
@@ -86,20 +91,36 @@ class ServeCommand:
             server.executor.version() or "version unknown",
         )
 
+        stop_signals = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+        received: list[str] = []
+
         def interrupt(signum: int, frame: Any) -> None:
+            # Ignore further stop signals at once: none may interrupt the graceful stop.
+            for stop_signal in stop_signals:
+                signal.signal(stop_signal, signal.SIG_IGN)
+            received.append(signal.Signals(signum).name)
             raise KeyboardInterrupt
 
-        previous = signal.signal(signal.SIGTERM, interrupt)
+        previous_term = signal.signal(signal.SIGTERM, interrupt)
+        # Closing the terminal (SIGHUP) is a graceful stop as well, unless SIGHUP was already
+        # ignored when the server started (as under nohup): that choice is kept.
+        previous_hup = signal.getsignal(signal.SIGHUP)
+        if previous_hup is not signal.SIG_IGN:
+            signal.signal(signal.SIGHUP, interrupt)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
-            log.info("stopping; the running task, if any, is terminated and reaped")
+            log.info(
+                "stopping (%s); the running task, if any, is terminated and reaped",
+                received[0] if received else "SIGINT",
+            )
         finally:
             # Do not let a second signal interrupt the graceful stop.
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            for stop_signal in stop_signals:
+                signal.signal(stop_signal, signal.SIG_IGN)
             server.stop()
-            signal.signal(signal.SIGTERM, previous)
+            signal.signal(signal.SIGHUP, previous_hup)
+            signal.signal(signal.SIGTERM, previous_term)
             signal.signal(signal.SIGINT, signal.default_int_handler)
         log.info("stopped")
         return EXIT_SUCCEEDED
