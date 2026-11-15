@@ -2,7 +2,7 @@
 
 > Project `ORBITAL` — Requirement 1. Targeted corrections for the findings of the QA report `qas/R1.md`.
 
-**Status: approved (revision 2, 2026-11-15).** You reviewed revision 1 and authorized Phases 12.0 – 12.6 with the decisions below; they are recorded in §10. The dual-sandbox re-test is yours, after you have reviewed the implementation and its regression results.
+**Status: implemented and verified locally (revision 3, 2026-11-15).** You approved revision 2 with the decisions below. Phases 12.0 – 12.5 are complete; their results are in §14, and the hand-over (12.6) is in our conversation. Still pending: your targeted dual-sandbox re-test (A-1, A-2, A-3).
 
 | Item | Value |
 |---|---|
@@ -27,7 +27,8 @@
 11. [Implementation phases and gates (Phase 12)](#11-implementation-phases-and-gates-phase-12)
 12. [Out of scope](#12-out-of-scope)
 13. [Definition of done](#13-definition-of-done)
-14. [Revision history](#14-revision-history)
+14. [Verification status](#14-verification-status)
+15. [Revision history](#15-revision-history)
 
 ---
 
@@ -571,19 +572,119 @@ If a gate fails, I stop and report rather than widening the change.
 ## 13. Definition of done
 
 - [x] You have reviewed and authorized this plan; decisions D1–D5 are recorded (commit 1).
-- [ ] The corrections are committed, one file per commit, with code and documents separate (commits 2–5 as applicable).
-- [ ] `ruff check`, `ruff format --check` and `mypy --strict` are clean on `src/`.
-- [ ] The temporary suite passes: the 240 existing tests and every new test in §9.1. The pseudo-terminal tests pass in 3 runs of 3, and no processes are left.
-- [ ] The before-the-fix behaviour was demonstrated by the new tests before the code change (Phase 12.1).
-- [ ] No real Claude run was made locally, and no OpenAI access or host-level operation took place.
-- [ ] The verification status, including the rehearsal-fidelity table, is recorded in this plan (commit 6) and reported to you.
-- [ ] Your re-test passes: A-1 and A-2, A-3 under Option A, and A-5 as chosen in D3.
+- [x] The corrections are committed, one file per commit, with code and documents separate: `a60be7d`, `44b8eb9`, `f8d7b21`. Commit 4 did not apply.
+- [x] `ruff check`, `ruff format --check` and `mypy --strict` are clean on `src/`.
+- [x] The temporary suite passes: 254 tests, the 240 existing ones and the 14 new ones. The new tests passed in 3 runs of 3, and no processes were left.
+- [x] The before-the-fix behaviour was demonstrated by the new tests before the code change (Phase 12.1, §14).
+- [x] No real Claude run was made locally, and no OpenAI access or host-level operation took place.
+- [x] The verification status, including the rehearsal-fidelity table, is recorded in this plan (commit 6, §14) and reported to you.
+- [ ] Your re-test passes: A-1 (D-9), A-2 (D-7) and A-3 (D-2); A-5 is carried forward under D3.
 
 ---
 
-## 14. Revision history
+## 14. Verification status
+
+Recorded on 2026-11-15, at the end of Phase 12.5. Evidence paths are relative to `.tmp/r1/`, which is temporary: never committed and never deleted.
+
+### Commits
+
+| Phase | Commit | File |
+|---|---|---|
+| 12.0 | `c38bedc` change: record the authorization of the R1 fix plan | `plans/R1-fix.md` |
+| 12.2 | `a60be7d` change: treat SIGHUP as a graceful stop in `serve` | `src/orbital/bridges/cli/serve_command.py` |
+| 12.3 | `44b8eb9` change: document stopping and log capture in `docs/bridges.md` | `docs/bridges.md` |
+| 12.4 | `f8d7b21` change: correct the dual-sandbox procedure in `plans/R1.md` (revision 6) | `plans/R1.md` |
+| 12.5 | `change: record the R1 fix verification status` (this revision) | `plans/R1-fix.md` |
+
+Commit 4 (`README.md`) did not apply, because Option A was chosen. No other tracked file changed: `qas/R1.md`, `specs/`, `pyproject.toml` and `README.md` are unchanged, and `serve_command.py` is the only source file changed since `eef7a7b`.
+
+### The new tests, before and after each fix
+
+The new tests are temporary:
+
+- IT-14c, IT-14d, IT-14e in `tests/integration/test_it_fix_signals.py`;
+- IT-17a … IT-17d in `tests/integration/test_it_fix_terminal.py`;
+- DOC-01 in `tests/integration/test_doc_consistency.py`;
+- the terminal driver in `tests/operator_terminal.py`.
+
+IT-17 and DOC-01 read the commands from the documents at run time, so each run types what the documents said at that moment.
+
+| Test | 12.1, before any fix (`c38bedc`) | 12.2, code fixed, procedure not yet | 12.5, final (`f8d7b21`) |
+|---|---|---|---|
+| IT-14c, SIGHUP | **Failed:** exit −1 (killed by SIGHUP); the fake Claude Code and its tool left running; no stop record | passed | passed, 3 of 3 |
+| IT-14c, SIGTERM and SIGINT | Failed only on the stop line naming the signal (D2, new behaviour); the stop itself was already graceful | passed | passed, 3 of 3 |
+| IT-14d, `nohup` | passed (SIGHUP ignored) | passed | passed, 3 of 3 |
+| IT-14e, SIGHUP as the second signal | **Failed:** a SIGHUP during a Ctrl-C stop killed the server partway through; the fake and its tool left running | passed | passed, 3 of 3 |
+| IT-14e, SIGINT and SIGTERM as the second signal | passed | passed | passed, 3 of 3 |
+| IT-17a, §14 C command, Ctrl-C | **Failed:** `serve.log` had none of the four stop lines (the documented `tee` command) | failed, as expected (procedure not yet corrected) | passed, 3 of 3 |
+| IT-17b, §14 C command, terminal closed | **Failed:** the fake and its tool left running, and the plan's own D-9 check listed them; no stop record | failed only on the lost lines (`tee`); nothing left running | passed, 3 of 3 |
+| IT-17c, `README.md` command, terminal closed | **Failed:** the fake and its tool left running | passed | passed, 3 of 3 |
+| IT-17d, D-8 command, Ctrl-C | **Failed:** `stopping` and `stopped` lost (`tee`); the Claude Code arguments did arrive | failed, as expected (procedure not yet corrected) | passed, 3 of 3 |
+| DOC-01 (3 checks) | 2 failed (`tee` in `plans/R1.md`; the log not written straight to the file); 1 passed | the same | passed, 3 of 3 |
+
+Evidence:
+
+- `runs/fix-12.1-before/`: `junit.xml`, `tests.log`;
+- `runs/fix-12.2-code/`;
+- `runs/fix-12.5-final/`;
+- one directory per test under `runs/test_it_fix_signals/` and `runs/test_it_fix_terminal/`, holding `facts.json`, `serve.log` and `terminal.txt`.
+
+### Gates and suite
+
+| Run | Gates | Suite | Evidence |
+|---|---|---|---|
+| 12.2, code fixed (before its commit) | clean | 249 passed. The 5 failures were the procedure-dependent tests, as expected. | `runs/fix-12.2-code/` |
+| 12.5, final at `f8d7b21` | `ruff check src`, `ruff format --check src` and `mypy` (strict, 46 source files) clean | **254 passed** (240 existing + 14 new) in 130.07 s; no processes left | `runs/fix-12.5-final/gates.log`, `junit.xml` |
+| 12.5 repeats | — | The 14 new tests passed in runs 2 and 3 (43.0 s each) | `runs/fix-12.5-final/junit-new-run2.xml`, `junit-new-run3.xml`, `repeat.log` |
+
+### Reproduction re-run (QA-R)
+
+`qa/repro_serve_log.py`, unchanged, with every original variant; simulated Claude Code with D-9's prompt (`runs/fix-12.5-final/repro.log`).
+
+| Variant | Before the fix (`qas/R1.md`) | After the fix | Run (`qa/runs/`) |
+|---|---|---|---|
+| `tee`, Ctrl-C | `accepted` only; nothing left | `accepted` only. This is `tee`'s behaviour, and it is why the procedure changed. Nothing left. | `20261115T051246Z-tee-79783d` |
+| `tee -i`, Ctrl-C | full stop record | full stop record, with `stopping (SIGINT)` | `20261115T051251Z-tee-i-1e134e` |
+| Redirect, Ctrl-C | full stop record | full stop record, with `stopping (SIGINT)` | `20261115T051255Z-redirect-a2cefc` |
+| `tee`, terminal closed | The server died at once; Claude Code and its `sleep 60` left running | **Graceful stop in 0.31 s; nothing left.** The lines are lost with `tee`, which is why the procedure no longer uses it. | `20261115T051300Z-hangup-622055` |
+
+### Rehearsal fidelity (QA-04)
+
+| Documented operator action | How it was rehearsed in this round |
+|---|---|
+| §14 B, the `orbital-bridge` shell function | Word for word from `plans/R1.md`, with the `.env` Python in place of `python3` (`CONSTRICTION.md`), in IT-17a … IT-17d |
+| §14 C, the server command | Word for word, with the port, workdir and log path replaced. The bind address came from `ORBITAL_BRIDGE_HOST=127.0.0.1`, and the fake Claude Code from `ORBITAL_BRIDGE_CLAUDE_BIN`. Run by IT-17a and IT-17b. |
+| Stopping with Ctrl-C in the server's terminal | Ctrl-C typed into an interactive bash on a pseudo-terminal (IT-17a, IT-17d) |
+| Closing the server's terminal | The pseudo-terminal closed (IT-17b, IT-17c) |
+| §14 C, `tail -f serve.log` | Not rehearsed; it only reads the file |
+| §16 D-8, the server command with `ORBITAL_BRIDGE_CLAUDE_ARGS` | Word for word in IT-17d; the arguments reach Claude Code |
+| D-7 and D-9, the timed process check | The bridge-runs pattern was run right after each stop (IT-17a … IT-17c). The time line and the `sleep 6[0]` pattern were not rehearsed, because the fake's tool is `sleep 300`; the reproduction re-run covers `sleep 60`. |
+| D-7 and D-9, the transcript check | Validated on Stage R's real transcripts (`qas/R1.md`); not run again, since D5 means no real Claude Code |
+| `README.md`, the server command | Word for word in IT-17c |
+| The other ChatGPT-side and Claude-side commands | Unchanged in this round. Covered by the existing suite and your earlier run. |
+
+### Deviations from revision 2
+
+1. **The stop handler ignores further stop signals as its first action,** as well as in `finally`. The sketch in §4 did so only in `finally`. This closes the short window in which a second signal, such as the second SIGHUP of a terminal hangup, could arrive before `finally` and skip `server.stop()`. The behaviour is as approved: a second stop signal during the stop is ignored.
+2. **IT-14c is parametrized over SIGHUP, SIGTERM and SIGINT,** so that D2 (the stop line names its signal) is tested for every stop signal.
+3. **IT-17a … IT-17d use the fake Claude Code's `tool-tree` mode** instead of D-9's prompt, because the temporary suite accepts only the fakes in `.tmp/r1/fakes/`. D-9's prompt itself is exercised by the reproduction re-run.
+
+### Remaining limitations
+
+- A crash, `SIGKILL` or `SIGQUIT` of the server still orphans the running Claude Code process (R9; deferred, `plans/R1.md` §18).
+- **SIGINT keeps Python's own handler.** A second SIGTERM or SIGHUP arriving within a moment of a Ctrl-C, before the `finally` block has run, could still interrupt the stop. The window lasts one log write and a few signal calls, and it existed before. Every other ordering is covered by deviation 1 and IT-14e.
+- A server started without redirection (the `README.md` form) loses its log with its terminal when the terminal is closed; the stop itself completes (IT-17c).
+- A `tee` pipeline, with or without `-i`, loses the stop record when the terminal is closed, because `tee` dies on SIGHUP. The documents no longer use `tee`.
+- The transcript check depends on Claude Code's transcript location and format, validated with 2.1.322.
+- What `sbx` sends when its terminal session closes is unknown. Optional test A-4 would show it.
+- Not yet verified across the sandboxes: A-1, A-2 and A-3, your re-test.
+
+---
+
+## 15. Revision history
 
 | Revision | Date | Change |
 |---|---|---|
 | 1 | 2026-11-15 | Initial fix plan for QA-01 … QA-06 of `qas/R1.md`, for review. Nothing implemented. |
 | 2 | 2026-11-15 | Approved. Records your decisions: D1 Option A, D2 approved, D3 targeted re-test (A-1, A-2, A-3 by you), D4 approved, D5 no local real-Claude rehearsal. Records your instructions for Phases 12.0 – 12.6. Commit 4 (`README.md`, Option B only) does not apply. |
+| 3 | 2026-11-15 | Implemented and verified locally. Adds §14, Verification status: the commits; the new tests before and after each fix; the gates and the full suite (254 passed); the reproduction re-run; the rehearsal-fidelity table; deviations and remaining limitations. Updates the status line and the definition of done. |
