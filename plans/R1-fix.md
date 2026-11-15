@@ -2,10 +2,11 @@
 
 > Project `ORBITAL` — Requirement 1. Targeted corrections for the findings of the QA report `qas/R1.md`.
 
-**Status: proposed (revision 1, 2026-11-15), for your review and authorization.** Nothing in this plan is implemented. No code, document or test was changed for it, and no Claude run was made.
+**Status: approved (revision 2, 2026-11-15).** You reviewed revision 1 and authorized Phases 12.0 – 12.6 with the decisions below; they are recorded in §10. The dual-sandbox re-test is yours, after you have reviewed the implementation and its regression results.
 
 | Item | Value |
 |---|---|
+| Decisions (2026-11-15) | **D1:** Option A, a graceful SIGHUP stop that keeps an inherited SIGHUP-ignore (`nohup`). **D2:** approved, the stop line names its signal. **D3:** targeted re-test, A-1 (D-9), A-2 (D-7) and A-3 (D-2) by you, carrying the other valid evidence forward. **D4:** approved, the logging note in `docs/bridges.md`. **D5:** no local real-Claude rehearsal; the simulated tests are used. |
 | Basis | `qas/R1.md` (commit `b20cb59`): findings QA-01 … QA-06, from the dual-sandbox run `r1-20261115T030647Z-bc9829` and the reproduction of the D-9 stop |
 | Code under review | `src/orbital` at HEAD, identical to `eef7a7b` (digest `1cc88d273dac7ad88774dc7d2227b6a33544a871550368b58747b809c488cba7`) |
 | Governing documents | `CONSTRICTION.md`, which overrides everything; `specs/R1.md`; `plans/R1.md`, revision 5 |
@@ -460,7 +461,7 @@ Each commit changes one file and carries a description. Code and documents are s
 | 1 | `change: record the authorization of the R1 fix plan` | `plans/R1-fix.md` | Always: the status becomes approved, and decisions D1–D5 are recorded |
 | 2 | `change: treat SIGHUP as a graceful stop in \`serve\`` | `src/orbital/bridges/cli/serve_command.py` | Option A only (with D2, if approved) |
 | 3 | `change: document stopping and log capture in \`docs/bridges.md\`` | `docs/bridges.md` | Always: the SIGHUP row for A or B, and the logging note if D4 is approved |
-| 4 | `change: warn that closing the server's terminal is not a graceful stop` | `README.md` | Option B only |
+| 4 | `change: warn that closing the server's terminal is not a graceful stop` | `README.md` | Option B only; **not applicable**, since Option A was chosen |
 | 5 | `change: correct the dual-sandbox procedure in \`plans/R1.md\`` | `plans/R1.md` | Always (revision 6): §10, §14 C, §16 D-7, D-8, D-9 and the evidence list, the test matrix, R9, §19, the §20 correction note, a new fix-round section, and the status line |
 | 6 | `change: record the R1 fix verification status` | `plans/R1-fix.md` | Always, after the local regression |
 
@@ -497,7 +498,9 @@ You run the corrected procedure of `plans/R1.md` §16 by hand. The removed ChatG
 | A-2 | D-7, corrected (§5) | 1 | **Yes** | `timed_out` / `execution_timeout`, exit 3. The timed check, within 30 s of the result, prints `none` twice. `serve.log` has the timeout lines. The transcript ends about 10 s after `accepted`, with 0 `SLEPT`. |
 | A-3 | D-2 | 0 | Recommended under Option A, as a smoke test of the new server code | `ok`, exit 0 |
 | A-4 | D-9, stopped by closing the server's terminal instead of Ctrl-C | 1 | Optional, Option A only | As A-1, with `stopping (SIGHUP)`. It also shows what `sbx` sends when a session closes. |
-| A-5 | D-1, D-3 … D-6, D-8 | 0 or 4 | Per decision D3 | Either carried over from run `r1-20261115T030647Z-bc9829`, or re-run. A full re-run also repeats D-1 with the policy closed. |
+| A-5 | D-1, D-3 … D-6, D-8 | 0 or 4 | Per decision D3: **carried over** (targeted re-test) | Either carried over from run `r1-20261115T030647Z-bc9829`, or re-run. A full re-run also repeats D-1 with the policy closed. |
+
+Under D3 you run A-1, A-2 and A-3 by hand; A-4 stays optional.
 
 **Why carrying the other steps over is justified.** Under Option A, the only source change is the server's signal handling and its stop line, inside `serve`. D-1 and D-3 … D-6 never stop the server. D-8's restarts are Ctrl-C stops whose outcome does not depend on the stop line. Under Option B the code is unchanged, so the earlier evidence covers the same code.
 
@@ -515,13 +518,23 @@ You run the corrected procedure of `plans/R1.md` §16 by hand. The removed ChatG
 
 ## 10. Decisions requested
 
-| # | Decision | Options | Recommendation |
-|---|---|---|---|
-| D1 | QA-02: SIGHUP handling | **A:** a graceful stop in R1, respecting `nohup`. **B:** a documented limitation. | **A** (§4) |
-| D2 | The stop line names its signal (`stopping (SIGHUP); …`) | Approve or strike. It is one line in C1's function; under Option B it would be the only code change, so with B I recommend striking it. | Approve with A; strike with B |
-| D3 | Scope of your acceptance re-test | **Targeted:** A-1, A-2, A-3, carrying over the other steps. **Full:** D-1 … D-9. | Targeted |
-| D4 | The logging note in `docs/bridges.md` (QA-01, operator side) | Approve or strike | Approve |
-| D5 | A local real-Claude rehearsal of the corrected D-7 and D-9 before your run (2 runs in this sandbox) | Not proposed: the changed behaviour does not depend on Claude Code, and the fake Claude reproduces F-4 exactly. Available if you want it. | Not proposed |
+| # | Decision | Options | Recommendation | Your decision (2026-11-15) |
+|---|---|---|---|---|
+| D1 | QA-02: SIGHUP handling | **A:** a graceful stop in R1, respecting `nohup`. **B:** a documented limitation. | **A** (§4) | **Option A**, keeping an inherited SIGHUP-ignore under `nohup` |
+| D2 | The stop line names its signal (`stopping (SIGHUP); …`) | Approve or strike. It is one line in C1's function; under Option B it would be the only code change, so with B I recommend striking it. | Approve with A; strike with B | **Approved** |
+| D3 | Scope of your acceptance re-test | **Targeted:** A-1, A-2, A-3, carrying over the other steps. **Full:** D-1 … D-9. | Targeted | **Targeted.** You run A-1 (D-9), A-2 (D-7) and A-3 (D-2) by hand after the implementation; the other valid evidence is carried forward. |
+| D4 | The logging note in `docs/bridges.md` (QA-01, operator side) | Approve or strike | Approve | **Approved** |
+| D5 | A local real-Claude rehearsal of the corrected D-7 and D-9 before your run (2 runs in this sandbox) | Not proposed: the changed behaviour does not depend on Claude Code, and the fake Claude reproduces F-4 exactly. Available if you want it. | Not proposed | **No rehearsal;** the simulated tests are used |
+
+Your further instructions for the implementation:
+
+- follow `CONSTRICTION.md` strictly;
+- stay within the approved scope;
+- preserve all earlier QA evidence;
+- introduce no new ChatGPT-side or host-level test harness;
+- show that the new tests reproduce each original defect before its fix and pass afterwards;
+- leave the dual-sandbox re-test to you;
+- report the changes, commits, test results and remaining limitations at the hand-over.
 
 ---
 
@@ -557,7 +570,7 @@ If a gate fails, I stop and report rather than widening the change.
 
 ## 13. Definition of done
 
-- [ ] You have reviewed and authorized this plan; decisions D1–D5 are recorded (commit 1).
+- [x] You have reviewed and authorized this plan; decisions D1–D5 are recorded (commit 1).
 - [ ] The corrections are committed, one file per commit, with code and documents separate (commits 2–5 as applicable).
 - [ ] `ruff check`, `ruff format --check` and `mypy --strict` are clean on `src/`.
 - [ ] The temporary suite passes: the 240 existing tests and every new test in §9.1. The pseudo-terminal tests pass in 3 runs of 3, and no processes are left.
@@ -573,3 +586,4 @@ If a gate fails, I stop and report rather than widening the change.
 | Revision | Date | Change |
 |---|---|---|
 | 1 | 2026-11-15 | Initial fix plan for QA-01 … QA-06 of `qas/R1.md`, for review. Nothing implemented. |
+| 2 | 2026-11-15 | Approved. Records your decisions: D1 Option A, D2 approved, D3 targeted re-test (A-1, A-2, A-3 by you), D4 approved, D5 no local real-Claude rehearsal. Records your instructions for Phases 12.0 – 12.6. Commit 4 (`README.md`, Option B only) does not apply. |
