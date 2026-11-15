@@ -200,7 +200,7 @@ Task records live in the memory of one server process. Idempotency, conflict det
 |---|---|
 | Resubmitting a pre-restart task id | The bridge accepts it as new. With the **same workdir**, Claude Code refuses the reused session id (`Session ID … is already in use`), so the result is `failed` / `executor_failed` and the task does not run twice. With a different workdir, it runs again. |
 | Polling a pre-restart task id | `communication_error` / `unknown_task`. The message gives the new server's start time. |
-| A graceful stop (Ctrl-C, `SIGTERM`) | The running task is terminated and reaped before the server exits; nothing is left running. |
+| A graceful stop (Ctrl-C, `SIGTERM`, or closing the server's terminal: `SIGHUP`) | The running task is terminated and reaped before the server exits; nothing is left running. The log names the signal, as in `stopping (SIGHUP)`. A server started under `nohup` keeps ignoring `SIGHUP`. |
 | A crash or `SIGKILL` of the server | The running Claude Code process may continue as an orphan that the new server does not know about. Check for leftovers with `pgrep -af -- '--output-format json --session[-]id'`. |
 
 Each task leaves a Claude Code session transcript under its task id in Claude Code's project store on the Claude side.
@@ -242,6 +242,8 @@ By default the client honours `HTTP_PROXY` and `NO_PROXY`, which a sandbox needs
 ## Command line
 
 `orbital-bridge` (the same as `python -m orbital.bridges`) prints results as one JSON object on stdout, and logs to stderr.
+
+To keep the server's log in a file, redirect it: `orbital-bridge serve … >> serve.log 2>&1`. Piping through `tee` loses the lines logged during a Ctrl-C stop, because Ctrl-C stops `tee` too.
 
 | Command | Purpose | Options |
 |---|---|---|
